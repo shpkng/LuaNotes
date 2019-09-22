@@ -1,0 +1,62 @@
+--A script that holds a common callback and invoke it when all async events have finished
+--在所有异步操作完成后调用一个公共回调
+
+--fufan chao hao kan
+local SyncHolder = {}
+
+SyncHolder.__syncList = {}
+
+--objectAsKeys: 所等待的回调在的类
+--callback： 所有异步操作完成后调用的回调
+function SyncHolder.new(objectAsKeys, callback)
+    local list = {keys = {}, args = {}, callback = callback}
+    --填充keys字典
+    for _, v in pairs(objectAsKeys) do
+        list.keys[v] = true
+        objectAsKeys.syncHolder = list
+    end
+
+    list.setValue = function(self, objectAsKey, valueTable)
+        --注入字段
+        for k, v in pairs(valueTable) do
+            self.args[k] = v
+        end
+        self.keys[objectAsKey] = nil
+        --调用回调
+        if #self.keys == 0 then
+            self.keys = nil
+            self:callback()
+            --释放 __syncList
+            SyncHolder.__syncList[callback] = nil
+        end
+    end
+    SyncHolder.__syncList[callback] = list
+    return list
+end
+
+--提前终止
+function SyncHolder.abort(key)
+    for k, v in pairs(SyncHolder.__syncList[key].keys) do
+        k.syncHolder = nil
+    end
+    SyncHolder.__syncList[key] = nil
+end
+
+return SyncHolder
+
+-- w = SyncHolder.new(
+--     require'fake',
+--     function(self)
+--         for k, v in pairs(self.args) do
+--             print(v)
+--         end
+--     end
+-- )
+
+-- fake  = {}
+
+-- function fake:init()
+--     fake.syncHolder:setValue(fake, {arg = 3})
+-- end
+
+-- return fake
