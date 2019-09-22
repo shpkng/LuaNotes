@@ -1,6 +1,3 @@
---A script that holds a common callback and invoke it when all async events have finished
---在所有异步操作完成后调用一个公共回调
-
 --fufan chao hao kan
 local SyncHolder = {}
 
@@ -11,10 +8,11 @@ SyncHolder.__syncList = {}
 function SyncHolder.new(objectAsKeys, callback)
     local list = {keys = {}, args = {}, callback = callback}
     --填充keys字典
-    for _, v in pairs(objectAsKeys) do
+    for _, v in ipairs(objectAsKeys) do
         list.keys[v] = true
-        objectAsKeys.syncHolder = list
+        v.syncHolder = list
     end
+    list.keys.__len = #objectAsKeys
 
     list.setValue = function(self, objectAsKey, valueTable)
         --注入字段
@@ -22,8 +20,9 @@ function SyncHolder.new(objectAsKeys, callback)
             self.args[k] = v
         end
         self.keys[objectAsKey] = nil
+        self.keys.__len = self.keys.__len - 1
         --调用回调
-        if #self.keys == 0 then
+        if self.keys.__len == 0 then
             self.keys = nil
             self:callback()
             --释放 __syncList
@@ -41,22 +40,26 @@ function SyncHolder.abort(key)
     end
     SyncHolder.__syncList[key] = nil
 end
+--return SyncHolder
 
-return SyncHolder
+fake = {}
 
--- w = SyncHolder.new(
---     require'fake',
---     function(self)
---         for k, v in pairs(self.args) do
---             print(v)
---         end
---     end
--- )
+function fake:init()
+    self.syncHolder:setValue(self, {arg = 3})
+end
 
--- fake  = {}
+fake2 = {}
 
--- function fake:init()
---     fake.syncHolder:setValue(fake, {arg = 3})
--- end
+function fake2:i()
+    self.syncHolder:setValue(self, {wow = 4})
+end
 
--- return fake
+w =
+    SyncHolder.new(
+    {fake,
+    fake2},
+    function(self)
+        print(self.args.arg)
+        print(self.args.wow)
+    end
+)
